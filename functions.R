@@ -45,8 +45,8 @@ create_data <- function(n_obs, error_dist = "normal") {
     for (i in seq(n_obs))
         X1[i] <- rnorm(n = 1,mean = AB[i,1] + AB[i,2],sd = X_sd)
 
-    # X2 is not correlated with A,B
-    X2 <- rnorm(n = n_obs, mean = 0, sd = X_sd)
+    # X2 is not correlated with A,B, but has same support
+    X2 <- rnorm(n = n_obs, mean = mean(X1), sd = X_sd)
     X <- cbind(X1,X2)
 
     # Compute dependent variable

@@ -43,9 +43,8 @@ cx_double kreg(cx_mat Y1,
 // Creates the dependent variable vector:
 // numerator_var[i] = exp(i * s * G1^{-1}(x[i]) * Y[i])
 cx_mat numerator_var_creator(mat Y1,
-			   		   mat X1,
-			   		   rowvec x1,
-			   		   mat s1)  {
+			   		         rowvec x1,
+			   		         mat s1)  {
 
 
     mat g1inv_mat = g1inv(x1);
@@ -55,6 +54,8 @@ cx_mat numerator_var_creator(mat Y1,
     cx_mat numerator_var = cx_mat(arma::cos(tmp), arma::sin(tmp));
 	return numerator_var.t();
 }
+
+
 
 
 // Characteristic function of G1^{-1}(x)'Y 
@@ -73,12 +74,26 @@ cx_colvec cf_numerator(mat Y1,
 
 	for (int i = 0; i < n_obs; i++) {
 		x = X1.row(i);
-		numerator_var = numerator_var_creator(Y1, X1, x, s1);
+		numerator_var = numerator_var_creator(Y1, x, s1);
 		results(i) = kreg(numerator_var, X1, x, b1);
 	}
 
 	return results;
 }
+
+
+// Increases the modulus to lower_bound
+cx_colvec trim(cx_colvec v, double lower_bound) {
+
+    for (int i = 0; i < v.n_elem; i++) {
+        if (abs(v[i]) < lower_bound) {
+            v[i] = v[i]/abs(v[i]) * lower_bound;
+        }
+    }
+    return v;
+}
+
+    
 
 
 // Characteristic function of denominator variable
@@ -101,6 +116,11 @@ cx_colvec cf_denominator(mat W1,
 	}
 	return results;
 }
+
+
+
+
+
 
 
 // [[Rcpp::export]]
@@ -146,8 +166,9 @@ ComplexVector rhs_variable(NumericMatrix Y,
 	mat X1 = as<mat>(X);
 	mat s1 = as<mat>(s);
 
-	cx_colvec numerator = cf_numerator(Y1, X1, s1, b1);
-	cx_colvec denominator = cf_denominator(W1, X1, s1);
+    // With denominator trimming 
+    cx_colvec numerator = cf_numerator(Y1, X1, s1, b1);
+	cx_colvec denominator = trim(cf_denominator(W1, X1, s1), .01);
 
 	return wrap(arma::mean(numerator/denominator));
 }
@@ -181,7 +202,7 @@ ComplexVector cf_denominator_R(NumericMatrix W,
 	mat X1 = as<mat>(X);    
 	mat s1 = as<mat>(s);
 
-	cx_colvec output = cf_denominator(W1, X1, s1);
+	cx_colvec output = trim(cf_denominator(W1, X1, s1), 0.01);
 
   return wrap(output);
 }
@@ -191,7 +212,7 @@ ComplexVector cf_denominator_R(NumericMatrix W,
 
 
 // [[Rcpp::export]]
-ComplexVector kreg_R(NumericMatrix Y,
+ComplexVector kreg_R(ComplexMatrix Y,
 			         NumericMatrix X,
 			         NumericMatrix x,
 			         double b)   {
@@ -199,9 +220,10 @@ ComplexVector kreg_R(NumericMatrix Y,
 	cx_mat Y1 = as<cx_mat>(Y);
 	mat X1 = as<mat>(X);    
 	rowvec x1 = as<rowvec>(x);
-
-
-    return wrap(kreg(Y1, X1, x1, b));
+    
+    cx_double output = kreg(Y1, X1, x1, b);
+    
+    return wrap(output);
 }
 
 
