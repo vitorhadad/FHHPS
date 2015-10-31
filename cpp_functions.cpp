@@ -40,7 +40,6 @@ cx_double kreg(cx_mat Y1,
 
 
 
-// Creates the dependent variable vector:
 // numerator_var[i] = exp(i * s * G1^{-1}(x[i]) * Y[i])
 cx_mat numerator_var_creator(mat Y1,
 			   		         rowvec x1,
@@ -128,13 +127,30 @@ cx_colvec cf_denominator(mat W1,
 	return results;
 }
 
+// Computes the chf at a specific point s
+// Useful to use with fastGHquad in R
+//[[Rcpp::export]]
+ComplexVector ratio(NumericMatrix Y,
+				    NumericMatrix W,
+					NumericMatrix X,
+                    NumericVector s,
+				    double b1)  {
+
+    mat Y1 = as<mat>(Y);
+	mat W1 = as<mat>(W);
+	mat X1 = as<mat>(X);
+	colvec s1 = as<colvec>(s);
+
+    cx_double target_cf = arma::mean(arma::mean(cf_numerator(Y1, X1, s1, b1)/cf_denominator(W1, X1, s1, b1)));
+    return wrap(target_cf);
+}
 
 
 
 
-
-
-// [[Rcpp::export]]
+// Computes a matrix of characteristic function values over s_grid
+// Useful wto product quick graphical output
+//[[Rcpp::export]]
 ComplexVector target_cf(NumericMatrix Y,
 						NumericMatrix W,
 					    NumericMatrix X,
@@ -151,16 +167,17 @@ ComplexVector target_cf(NumericMatrix Y,
 
     cx_mat target_cf = cx_mat(s_pts, s_pts);
     
-    int k = 0;
     for (int i = 0; i < s_pts; i++) {
         for (int j = 0; j < s_pts; j++) {
             s(0) = s_grid1(i); s(1) = s_grid1(j);
             target_cf(i,j) = arma::mean(arma::mean(cf_numerator(Y1, X1, s, b1)/cf_denominator(W1, X1, s, b1)));
         }
     }  
-
 	return wrap(target_cf);
 }
+
+
+
 
 
 
