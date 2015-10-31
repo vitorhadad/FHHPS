@@ -45,9 +45,7 @@ cx_mat numerator_var_creator(mat Y1,
 			   		         rowvec x1,
 			   		         mat s1)  {
 
-
-    mat g1inv_mat = g1inv(x1);
-	mat tmp = s1.t() * g1inv_mat * Y1.t();
+	mat tmp = s1.t() * g1inv(x1) * Y1.t();
 
     // Using Euler's formula: exp(iz) = cos(z) + isin(z) 
     cx_mat numerator_var = cx_mat(arma::cos(tmp), arma::sin(tmp));
@@ -81,7 +79,7 @@ cx_colvec cf_numerator(mat y1,
 	int n_features = x1.n_cols;
 
 	mat x = mat(1, n_features);
-	cx_mat numerator_var = cx_mat(n_obs,1);
+	cx_mat numerator_var = cx_mat(n_obs, 1);
 	cx_colvec results = cx_colvec(n_obs);
 
 
@@ -126,6 +124,7 @@ cx_colvec cf_denominator(mat W1,
 	}
 	return results;
 }
+
 
 // Computes the chf at a specific point s
 // Useful to use with fastGHquad in R
@@ -175,33 +174,6 @@ ComplexVector target_cf(NumericMatrix Y,
     }  
 	return wrap(target_cf);
 }
-
-
-
-
-
-
-// Divides the char. fcts pointwise and takes mean
-// [[Rcpp::export]]
-ComplexVector rhs_variable(NumericMatrix Y,
-						   NumericMatrix W,
-					       NumericMatrix X,
-						   NumericMatrix s,
-						   double b1)  {
-
-	mat Y1 = as<mat>(Y);
-	mat W1 = as<mat>(W);
-	mat X1 = as<mat>(X);
-	mat s1 = as<mat>(s);
-
-    // With denominator trimming 
-    cx_colvec numerator = cf_numerator(Y1, X1, s1, b1);
-	cx_colvec denominator = trim(cf_denominator(W1, X1, s1, b1), .01);
-
-	return wrap(arma::mean(numerator/denominator));
-}
-
-
 
 
 
