@@ -53,22 +53,6 @@ cx_mat numerator_var_creator(mat Y1,
 }
 
 
-// denominator var[i] = exp(i * s * G3(x[i]) * W[i])
-cx_mat denominator_var_creator(mat W1,
-			   		         rowvec x1,
-			   		         mat s1)  {
-
-
-	mat tmp = s1.t() * g3(x1) * W1.t();
-
-    // Using Euler's formula: exp(iz) = cos(z) + isin(z) 
-    cx_mat denominator_var = cx_mat(arma::cos(tmp), arma::sin(tmp));
-	return denominator_var.t();
-}
-
-
-
-
 // Characteristic function of numerator 
 cx_colvec cf_numerator(mat y1,
 			           mat x1,
@@ -105,59 +89,43 @@ cx_colvec trim(cx_colvec v, double lower_bound) {
 
 
 // Characteristic fct of denominator
-cx_colvec cf_denominator(mat W1,
+cx_colvec cf_denominator(mat muW,
+                        mat SigmaW,
 			           mat X1,
 			           mat s1,
-			           double b1) {
+			           double b1,
+                       double t) {
 
 	int n_obs = X1.n_rows;
 	int n_features = X1.n_cols;
 
 	mat x = mat(1, n_features);
-	cx_mat denominator_var = cx_mat(n_obs,1);
 	cx_colvec results = cx_colvec(n_obs);
-
+    
 	for (int i = 0; i < n_obs; i++) {
 		x = X1.row(i);
-		denominator_var = denominator_var_creator(W1, x, s1);
-		results(i) = kreg(denominator_var, X1, x, b1);
-	}
-	return results;
+        results(i) = as_scalar(exp(
+                    1i * s1.t() * g3(x) * muW 
+                    - .5 * s1.t() * g3(x) * SigmaW * g3(x).t() * s1));
+    }
+	return trim(results, t);
 }
-
-
-// Computes the chf at a specific point s
-// Useful to use with fastGHquad in R
-//[[Rcpp::export]]
-ComplexVector ratio(NumericMatrix Y,
-				    NumericMatrix W,
-					NumericMatrix X,
-                    NumericVector s,
-				    double b1)  {
-
-    mat Y1 = as<mat>(Y);
-	mat W1 = as<mat>(W);
-	mat X1 = as<mat>(X);
-	colvec s1 = as<colvec>(s);
-
-    cx_double target_cf = arma::mean(arma::mean(cf_numerator(Y1, X1, s1, b1)/cf_denominator(W1, X1, s1, b1)));
-    return wrap(target_cf);
-}
-
 
 
 
 // Computes a matrix of characteristic function values over s_grid
-// Useful wto product quick graphical output
 //[[Rcpp::export]]
 ComplexVector target_cf(NumericMatrix Y,
-						NumericMatrix W,
-					    NumericMatrix X,
+						NumericMatrix X,
+					    NumericMatrix muW,
+                        NumericMatrix SigmaW,
                         NumericVector s_grid,
-						double b1)  {
+						double b1,
+                        double t)  {
 
 	mat Y1 = as<mat>(Y);
-	mat W1 = as<mat>(W);
+	mat muW1 = as<mat>(muW);
+    mat SigmaW1 = as<mat>(SigmaW);
 	mat X1 = as<mat>(X);
 	vec s_grid1 = as<vec>(s_grid);
 
@@ -169,7 +137,8 @@ ComplexVector target_cf(NumericMatrix Y,
     for (int i = 0; i < s_pts; i++) {
         for (int j = 0; j < s_pts; j++) {
             s(0) = s_grid1(i); s(1) = s_grid1(j);
-            target_cf(i,j) = arma::mean(arma::mean(cf_numerator(Y1, X1, s, b1)/cf_denominator(W1, X1, s, b1)));
+            target_cf(i,j) = arma::mean(arma::mean(cf_numerator(Y1, X1, s, b1)/
+                                        cf_denominator(muW1, SigmaW1, X1, s, b1, t)));
         }
     }  
 	return wrap(target_cf);
