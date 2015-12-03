@@ -13,7 +13,6 @@ mat g1inv(rowvec x) {
 	return(g1inv);
 }
 
-
 // G3 matrix
 mat g3(rowvec x) {
     mat g2 = mat(2,2);
@@ -102,10 +101,13 @@ cx_colvec cf_denominator(mat muW,
 	mat x = mat(1, n_features);
 	cx_colvec results = cx_colvec(n_obs);
     
+    arma::cx_mat j = arma::cx_mat(1,1);
+    j(0,0) = 1i;
+
 	for (int i = 0; i < n_obs; i++) {
 		x = X1.row(i);
-        results(i) = as_scalar(exp(
-                    1i * s1.t() * g3(x) * muW 
+        results(i) = arma::as_scalar(arma::exp(
+                    j * s1.t() * g3(x) * muW 
                     - .5 * s1.t() * g3(x) * SigmaW * g3(x).t() * s1));
     }
 	return trim(results, t);
@@ -160,6 +162,7 @@ ComplexVector kreg_R(ComplexMatrix Y,
     
     return wrap(output);
 }
+
 
 
 
